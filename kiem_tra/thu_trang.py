@@ -176,7 +176,9 @@ def thu_them_hanh_dong(pg, url, khung):
 def thu_them_thong_bao(pg, url, khung):
     di(pg, url, "trang-dau")
     pg.wait_for_timeout(200)
-    kiem(pg.locator("#bat-thong-bao button").count() == 0, f"{khung}: chưa có khoá VAPID thì không hiện nút Bật thông báo")
+    co_khoa = "VAPID_PUBLIC = ''" not in (GOC / "js" / "cau_hinh.js").read_text()
+    # bài thử gửi-lại-đăng-ký đã giả một thiết bị có đăng ký → có khoá hay không thì cũng không hiện nút
+    kiem(pg.locator("#bat-thong-bao button").count() == 0, f"{khung}: thiết bị đã đăng ký / chưa có khoá thì không hiện nút Bật thông báo (có khoá: {co_khoa})")
     goc = url.rsplit("/", 1)[0]
     kq = pg.evaluate("""async (g) => { const m = await fetch(g + '/manifest.webmanifest'); const j = await m.json();
         const s = await fetch(g + '/sw.js'); const i = await fetch(g + '/anh/icon-192.png');
