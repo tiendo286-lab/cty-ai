@@ -10,7 +10,8 @@ import * as lich_su from './man/lich_su.js';
 
 export const HANH_DONG = {};          // các nút bấm: bang.js đăng ký thêm (data-act="...")
 export const trang = { tab: 'can_anh', loc: 'tat_ca' };
-let dang_ve = false;
+let dang_ve = null;      // lời hứa của lần vẽ đang chạy
+let ve_lai = false;      // có yêu cầu vẽ lại trong lúc đang vẽ
 
 const ICON = {
   'trang-dau': '<path d="M3 11 12 4l9 7v9h-6v-6H9v6H3z" stroke-linejoin="round"/>',
@@ -44,9 +45,16 @@ function man_khoa(chu, nut) {
   $('#app').innerHTML = String(html`<div class="man-khoa"><h1>Công ty AI</h1><p>${chu}</p>${nut || ''}</div>`);
 }
 
-export async function ve() {
-  if (dang_ve) return;
-  dang_ve = true;
+export function ve() {
+  if (dang_ve) { ve_lai = true; return dang_ve; }
+  dang_ve = ve_mot().finally(() => {
+    dang_ve = null;
+    if (ve_lai) { ve_lai = false; return ve(); }
+  });
+  return dang_ve;
+}
+
+async function ve_mot() {
   try {
     if (!GIA && !(await da_dang_nhap())) {
       man_khoa('Anh chưa đăng nhập. Mở web Milano, đăng nhập bằng tài khoản Chủ, rồi quay lại trang này.',
@@ -70,8 +78,6 @@ export async function ve() {
   } catch (e) {
     toast(e.message || 'Không tải được dữ liệu');
     if (/chỉ dành cho Chủ/.test(e.message)) man_khoa('Trang này chỉ dành cho Chủ.');
-  } finally {
-    dang_ve = false;
   }
 }
 
@@ -91,4 +97,4 @@ window.addEventListener('hashchange', () => { trang.tab = 'can_anh'; dong_bang()
 setInterval(() => { if (document.visibilityState === 'visible' && !dang_mo_bang()) ve(); }, 20000);
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && !dang_mo_bang()) ve(); });
 
-import('./bang.js').catch(() => {}).finally(() => ve());
+import('./bang.js').catch((e) => console.error(e)).finally(() => ve());

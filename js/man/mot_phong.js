@@ -12,7 +12,7 @@ export function ve(d, tab) {
   return html`
   <div class="model"><span class="nhan">Model của phòng</span>
     <div class="seg" role="radiogroup" aria-label="Model của phòng">${MODEL.map(([k, lb, nm]) =>
-      html`<button role="radio" aria-checked="${p.model === k}" class="${p.model === k ? 'on' : ''}" data-act="doi-model" data-ma="${p.ma}" data-model="${k}">${lb}<small>${nm}</small></button>`)}</div>
+      html`<button role="radio" aria-checked="${p.model === k ? 'true' : 'false'}" class="${p.model === k ? 'on' : ''}" data-act="doi-model" data-ma="${p.ma}" data-model="${k}">${lb}<small>${nm}</small></button>`)}</div>
     <span class="hint">${MODEL_GOI_Y[p.model]}</span></div>
   <details class="desc"><summary>Mô tả phòng</summary><p>${p.mo_ta}</p></details>
   <div class="tabs">${NHOM.map(([k, lb]) => html`<button class="${cur === k ? 'on' : ''} ${k === 'can_anh' && nhom.can_anh.length ? 'need' : ''}" data-act="tab" data-tab="${k}"><b class="num">${nhom[k].length}</b>${lb}</button>`)}</div>

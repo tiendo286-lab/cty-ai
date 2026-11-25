@@ -15,7 +15,7 @@ export function luoi_phong(phong) {
 }
 export function muc_kien_thuc(ds, tieu_de, ma_phong) {
   return html`<section><div class="sec-h"><h2>${tieu_de} (${ds.length})</h2></div>
-    <div class="list">${ds.length ? ds.map((k) => html`<button class="row ${k.trang_thai === 'da_bo' ? 'bo' : ''}" data-act="mo-kien-thuc" data-id="${k.id}">
+    <div class="list">${ds.length ? ds.map((k) => html`<button class="row ${k.trang_thai === 'da_bo' ? 'bo' : ''}" data-act="mo-kien-thuc" data-id="${k.id}" data-trang-thai="${k.trang_thai}" data-loai="${k.loai}" data-tep="${(k.tep || []).map((t) => t.id).join(',')}">
       <span class="txt"><span class="t">${k.noi_dung}</span>${k.trang_thai === 'da_bo' ? html`<br><span class="s">Đã bỏ · AI không làm theo nữa</span>` : ''}</span>
       <span class="ktag">${k.loai === 'tai_lieu' ? 'Tài liệu' : 'Đã chốt'}</span></button>`) : html`<div class="empty">Chưa có kiến thức nào. Bấm nút dưới để nạp.</div>`}</div>
     <button class="btn rong" data-act="nap-kien-thuc" data-phong="${ma_phong ?? ''}">+ Nạp kiến thức ${ma_phong ? 'cho phòng này' : 'cho cả công ty'}</button></section>`;
