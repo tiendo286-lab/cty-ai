@@ -173,6 +173,18 @@ def thu_them_hanh_dong(pg, url, khung):
     kiem(_so_cho_anh(pg) == truoc - 1, f"{khung}: Đóng việc → Chờ anh giảm 1")
 
 
+def thu_them_thong_bao(pg, url, khung):
+    di(pg, url, "trang-dau")
+    pg.wait_for_timeout(200)
+    kiem(pg.locator("#bat-thong-bao button").count() == 0, f"{khung}: chưa có khoá VAPID thì không hiện nút Bật thông báo")
+    goc = url.rsplit("/", 1)[0]
+    kq = pg.evaluate("""async (g) => { const m = await fetch(g + '/manifest.webmanifest'); const j = await m.json();
+        const s = await fetch(g + '/sw.js'); const i = await fetch(g + '/anh/icon-192.png');
+        return [m.ok, j.display, s.ok, i.ok, i.headers.get('content-type')]; }""", goc)
+    kiem(kq[0] and kq[1] == "standalone" and kq[2] and kq[3], f"{khung}: có manifest (standalone), sw.js, biểu tượng ({kq})")
+    kiem(pg.locator("link[rel='manifest']").count() == 1, f"{khung}: trang khai báo manifest")
+
+
 def main():
     s = may_chu()
     url = f"http://127.0.0.1:{s.server_address[1]}/index.html"

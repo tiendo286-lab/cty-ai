@@ -2,6 +2,7 @@
 import { HANH_DONG, ve } from './app.js';
 import { rpc } from './api.js';
 import { gui_tep } from './tep.js';
+import { bat } from './thong_bao.js';
 import { $, MAU_TRANG_THAI, bang, dong_bang, gio, html, toast } from './ui.js';
 
 let TQ = null;
@@ -128,3 +129,6 @@ HANH_DONG['doi-model'] = (el) => {
   rpc('app_ai_doi_model', { p_ma: el.dataset.ma, p_model: el.dataset.model })
     .then(() => { toast('Đã đổi model của phòng'); return ve(); }).catch((e) => toast(e.message));
 };
+
+// ---------- thông báo
+HANH_DONG['bat-thong-bao'] = () => bat().catch((e) => toast(e.message || 'Không bật được thông báo'));
