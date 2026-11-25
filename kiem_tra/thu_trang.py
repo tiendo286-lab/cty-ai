@@ -185,6 +185,67 @@ def thu_them_thong_bao(pg, url, khung):
     kiem(pg.locator("link[rel='manifest']").count() == 1, f"{khung}: trang khai báo manifest")
 
 
+def thu_them_dang_nhap(pg, url, khung):
+    pg.goto(url + "?gia=1&chua_dang_nhap=1#trang-dau")
+    pg.wait_for_selector("#dn-ma")
+    pg.fill("#dn-ma", "chu")
+    pg.fill("#dn-mk", "sai")
+    pg.click("#dn-nut")
+    pg.wait_for_selector("#dn-loi:not([hidden])")
+    kiem("không đúng" in pg.locator("#dn-loi").inner_text(), f"{khung}: đăng nhập sai báo lỗi")
+    pg.fill("#dn-mk", "dung")
+    pg.click("#dn-nut")
+    pg.wait_for_selector(".dept", timeout=5000)
+    kiem(pg.locator(".dept").count() == 7, f"{khung}: đăng nhập ngay trên trang rồi vào được (cho ứng dụng ở màn hình chính iPhone)")
+
+
+def thu_them_sua_truoc_khi_dung(pg, url, khung):
+    di(pg, url, "phong-kho")
+    pg.locator("[data-act='nap-kien-thuc']").first.click()
+    pg.fill("#noi-dung", "Kiểm kê ngày 30")
+    pg.click("[data-act='gui-kien-thuc']")
+    pg.wait_for_timeout(300)
+    di(pg, url, "trang-dau")
+    pg.locator(".wait .row", has_text="Kiểm kê ngày 30").first.click()
+    pg.wait_for_selector("#tra-loi")
+    pg.fill("#tra-loi", "Kiểm kê ngày 29")
+    pg.click("[data-act='dong-y']")
+    pg.wait_for_timeout(400)
+    di(pg, url, "phong-kho")
+    kt = pg.evaluate("[...document.querySelectorAll('[data-act=mo-kien-thuc] .t')].map(e => e.textContent)")
+    kiem("Kiểm kê ngày 30" not in kt, f"{khung}: sửa chữ rồi bấm Đúng không ghi bản cũ ({kt[:3]})")
+
+
+def thu_them_xem_tep(pg, url, khung):
+    di(pg, url, "phong-ns")
+    pg.locator("[data-act='nap-kien-thuc']").first.click()
+    pg.fill("#noi-dung", "Ảnh công thức")
+    pg.set_input_files("#tep", files=[{"name": "ct.png", "mimeType": "image/png", "buffer": _png(40, 30)}])
+    pg.click("[data-act='gui-kien-thuc']")
+    pg.wait_for_timeout(400)
+    di(pg, url, "trang-dau")
+    pg.locator(".wait .row", has_text="Ảnh công thức").first.click()
+    pg.wait_for_selector("[data-act='xem-tep']")
+    pg.click("[data-act='xem-tep']")
+    pg.wait_for_selector(".sheet img.xem-anh", timeout=3000)
+    rong = pg.evaluate("document.querySelector('.sheet img.xem-anh').naturalWidth")
+    kiem(rong > 0, f"{khung}: xem ảnh kèm hiện ngay trong bảng (không tải về)")
+    pg.keyboard.press("Escape")
+
+
+def thu_them_gui_lai_dang_ky(pg, url, khung):
+    pg.add_init_script("""
+      const sub = { toJSON: () => ({ endpoint: 'https://push.example/x', keys: { p256dh: 'k', auth: 'a' } }) };
+      const reg = { pushManager: { getSubscription: async () => sub } };
+      Object.defineProperty(navigator, 'serviceWorker', { value: { register: async () => reg, getRegistration: async () => reg, ready: Promise.resolve(reg) } });
+      window.PushManager = window.PushManager || function () {};
+    """)
+    di(pg, url, "trang-dau")
+    pg.wait_for_timeout(500)
+    goi = pg.evaluate("window.__gia.goi.map(g => g[0])")
+    kiem("app_ai_dang_ky_thong_bao" in goi, f"{khung}: thiết bị đã đăng ký thì gửi lại đăng ký (phòng lần trước gửi lỗi)")
+
+
 def main():
     s = may_chu()
     url = f"http://127.0.0.1:{s.server_address[1]}/index.html"

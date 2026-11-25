@@ -13,6 +13,6 @@ self.addEventListener('notificationclick', (e) => {
   const dich = new URL('./index.html' + (e.notification.data?.url || ''), self.registration.scope).href;
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((ds) => {
     const c = ds.find((x) => x.url.startsWith(self.registration.scope));
-    return c ? c.navigate(dich).then((w) => (w || c).focus()) : self.clients.openWindow(dich);
+    return c ? c.navigate(dich).then((w) => (w || c).focus()).catch(() => self.clients.openWindow(dich)) : self.clients.openWindow(dich);
   }));
 });

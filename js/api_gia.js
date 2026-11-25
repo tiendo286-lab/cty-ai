@@ -150,4 +150,10 @@ export async function rpc(ten, args = {}) {
   const f = H[ten] || loi('Không có hàm ' + ten);
   return structuredClone(f(args) ?? null);
 }
-export async function da_dang_nhap() { return true; }
+let da_dn = !Q.has('chua_dang_nhap');
+export async function da_dang_nhap() { return da_dn; }
+export async function dang_nhap(ma, mk) {
+  await new Promise((r) => setTimeout(r, 30));
+  if (mk !== 'dung') throw new Error('Mã nhân viên hoặc mật khẩu không đúng.');
+  da_dn = true;
+}

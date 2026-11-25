@@ -165,3 +165,11 @@ nav.bottom a.on { color: var(--accent); }
 .tep-ds button { text-align: left; background: none; border: 0; color: var(--accent); font-weight: 600; padding: 2px 0; }
 .bubble .giao { margin-top: 6px; }
 .khoa-nhan { margin-top: 12px; padding: 10px 12px; border-radius: 12px; background: var(--surface-2); color: var(--muted); font-size: 14px; }
+
+.dn { display: flex; flex-direction: column; gap: 6px; width: 100%; max-width: 320px; text-align: left; }
+.dn label { font-size: 13px; font-weight: 700; color: var(--muted); margin-top: 6px; }
+.dn input { font: inherit; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--fg); }
+.dn .btn { margin-top: 10px; }
+.dn .link { text-align: center; margin-top: 8px; }
+.dn-loi { color: var(--st-stuck); font-weight: 600; margin: 4px 0 0; }
+img.xem-anh { display: block; max-width: 100%; border-radius: 12px; margin-top: 10px; }

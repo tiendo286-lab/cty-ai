@@ -13,3 +13,13 @@ export async function da_dang_nhap() {
   const { data } = await sb.auth.getSession();
   return !!data?.session;
 }
+
+const LOI_DN = 'Mã nhân viên hoặc mật khẩu không đúng.';
+// giống trang đăng nhập web Milano: mã nhân viên → địa chỉ đăng nhập (app_login_email) → mật khẩu
+export async function dang_nhap(ma, mk) {
+  const r = await rpc('app_login_email', { p_login: ma });
+  if (!r || r.error) throw new Error(LOI_DN);
+  const { error } = await sb.auth.signInWithPassword({ email: r.email, password: mk });
+  if (error) throw new Error(/Invalid login credentials/i.test(error.message || '') ? LOI_DN : error.message);
+  await rpc('app_touch_login').catch(() => {});
+}

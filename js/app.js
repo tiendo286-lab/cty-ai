@@ -1,5 +1,5 @@
 // Trang Công ty AI: định tuyến #..., đầu trang (trạng thái máy Mac), thanh dưới, tải lại mỗi 20 giây.
-import { GIA, da_dang_nhap, rpc } from './api.js';
+import { da_dang_nhap, dang_nhap, rpc } from './api.js';
 import { WEB_MILANO } from './cau_hinh.js';
 import { $, dang_mo_bang, dong_bang, gio, html, raw, toast } from './ui.js';
 import * as trang_dau from './man/trang_dau.js';
@@ -45,6 +45,27 @@ function man_khoa(chu, nut) {
   $('#app').innerHTML = String(html`<div class="man-khoa"><h1>Công ty AI</h1><p>${chu}</p>${nut || ''}</div>`);
 }
 
+// Ô đăng nhập ngay trên trang (ứng dụng ở màn hình chính iPhone không dùng chung đăng nhập với Safari)
+function man_dang_nhap() {
+  man_khoa('Đăng nhập bằng tài khoản Chủ (giống web Milano).', html`<form id="dn-form" class="dn">
+    <label for="dn-ma">Mã nhân viên</label><input id="dn-ma" autocomplete="username" autocapitalize="off" required>
+    <label for="dn-mk">Mật khẩu</label><input id="dn-mk" type="password" autocomplete="current-password" required>
+    <p id="dn-loi" class="dn-loi" hidden></p>
+    <button class="btn pri" id="dn-nut" type="submit">Đăng nhập</button>
+    <a class="link" href="${WEB_MILANO}">Mở web Milano</a></form>`);
+  $('#dn-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const nut = $('#dn-nut'), loi = $('#dn-loi');
+    nut.disabled = true; loi.hidden = true;
+    try {
+      await dang_nhap($('#dn-ma').value.trim(), $('#dn-mk').value);
+      await ve();
+    } catch (err) {
+      loi.textContent = err.message || 'Không đăng nhập được'; loi.hidden = false; nut.disabled = false;
+    }
+  });
+}
+
 export function ve() {
   if (dang_ve) { ve_lai = true; return dang_ve; }
   dang_ve = ve_mot().finally(() => {
@@ -56,11 +77,7 @@ export function ve() {
 
 async function ve_mot() {
   try {
-    if (!GIA && !(await da_dang_nhap())) {
-      man_khoa('Anh chưa đăng nhập. Mở web Milano, đăng nhập bằng tài khoản Chủ, rồi quay lại trang này.',
-        html`<a class="btn pri" href="${WEB_MILANO}">Đăng nhập ở web Milano</a>`);
-      return;
-    }
+    if (!(await da_dang_nhap())) { man_dang_nhap(); return; }
     if (!(await rpc('app_ai_la_chu'))) { man_khoa('Trang này chỉ dành cho Chủ.'); return; }
     const d = duong();
     const tq = await rpc('app_ai_tong_quan');

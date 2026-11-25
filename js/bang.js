@@ -55,7 +55,7 @@ async function mo_viec(id) {
   if (v.trang_thai === 'dang_lam') {
     hanh = html`<textarea id="tra-loi" disabled placeholder="Phòng đang làm"></textarea><div class="khoa-nhan">Phòng đang làm, chờ xong rồi nhắn.</div>`;
   } else if (v.trang_thai === 'cho_anh') {
-    hanh = html`<textarea id="tra-loi" placeholder="${kien_thuc ? 'Sửa lại nội dung kiến thức' : 'Trả lời hoặc góp ý (bấm micro để nói)'}">${kien_thuc ? v.noi_dung : ''}</textarea>
+    hanh = html`<textarea id="tra-loi" data-goc="${kien_thuc ? v.noi_dung : ''}" placeholder="${kien_thuc ? 'Sửa lại nội dung kiến thức' : 'Trả lời hoặc góp ý (bấm micro để nói)'}">${kien_thuc ? v.noi_dung : ''}</textarea>
       <div class="acts"><button class="btn pri" data-act="dong-y" data-id="${v.id}">${kien_thuc ? 'Đúng, ghi lại' : 'Đồng ý'}</button>
       <button class="btn" data-act="gop-y" data-id="${v.id}">${kien_thuc ? 'Sửa lại' : 'Gửi góp ý'}</button>
       <button class="btn" data-act="dong-viec" data-id="${v.id}">Đóng việc</button></div>`;
@@ -73,6 +73,13 @@ async function mo_viec(id) {
 }
 HANH_DONG['mo-viec'] = (el) => mo_viec(el.dataset.id).catch((e) => toast(e.message));
 HANH_DONG['dong-y'] = (el) => bam(el, async () => {
+  const o = $('#tra-loi');
+  // nạp kiến thức: anh đã sửa chữ mà bấm Đúng → gửi bản sửa cho phòng đọc lại, không ghi bản cũ
+  if (o && o.dataset.goc && o.value.trim() && o.value.trim() !== o.dataset.goc.trim()) {
+    await rpc('app_ai_tra_loi', { p_viec: Number(el.dataset.id), p_noi_dung: o.value.trim() });
+    dong_bang(); toast('Anh đã sửa nội dung — phòng sẽ đọc lại bản mới'); await ve();
+    return;
+  }
   await rpc('app_ai_dong_y', { p_viec: Number(el.dataset.id) });
   dong_bang(); toast('Đã đồng ý'); await ve();
 });
@@ -87,10 +94,20 @@ HANH_DONG['dong-viec'] = (el) => bam(el, async () => {
   dong_bang(); toast('Đã đóng việc'); await ve();
 });
 HANH_DONG['xem-tep'] = (el) => rpc('app_ai_tep', { p_id: Number(el.dataset.id) }).then((t) => {
+  // ảnh: hiện ngay trong bảng; tệp khác: hiện nút để anh tự bấm mở / tải (iPhone chặn mở tự động)
+  el.parentElement.querySelectorAll('.xem-anh, .tep-mo').forEach((x) => x.remove());
+  if (t.mime.startsWith('image/')) {
+    const i = document.createElement('img');
+    i.className = 'xem-anh'; i.alt = t.ten; i.src = `data:${t.mime};base64,${t.base64}`;
+    el.insertAdjacentElement('afterend', i);
+    return;
+  }
   const bytes = Uint8Array.from(atob(t.base64), (c) => c.charCodeAt(0));
-  const u = URL.createObjectURL(new Blob([bytes], { type: t.mime }));
-  const a = document.createElement('a'); a.href = u; a.target = '_blank'; a.rel = 'noopener'; a.download = t.mime.startsWith('image/') || t.mime === 'application/pdf' ? '' : t.ten;
-  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 60000);
+  const a = document.createElement('a');
+  a.className = 'btn tep-mo'; a.href = URL.createObjectURL(new Blob([bytes], { type: t.mime }));
+  a.textContent = (t.mime === 'application/pdf' ? 'Mở ' : 'Tải ') + t.ten;
+  if (t.mime === 'application/pdf') { a.target = '_blank'; a.rel = 'noopener'; } else a.download = t.ten;
+  el.insertAdjacentElement('afterend', a);
 }).catch((e) => toast(e.message));
 
 // ---------- kiến thức

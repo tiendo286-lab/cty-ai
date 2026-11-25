@@ -37,4 +37,19 @@ export async function bat() {
   toast('Đã bật thông báo');
   ve_nut();
 }
-document.addEventListener('da-ve', (e) => { if (e.detail.man === 'trang-dau') ve_nut().catch(() => {}); });
+// đã có đăng ký trên thiết bị → gửi lại lên máy chủ mỗi lần mở trang (phòng lần trước gửi lỗi; máy chủ tự gộp trùng)
+let da_gui_lai = false;
+async function gui_lai() {
+  if (da_gui_lai || !co_ho_tro()) return;
+  da_gui_lai = true;
+  const r = await navigator.serviceWorker.getRegistration();
+  const s = r && (await r.pushManager.getSubscription());
+  if (!s) return;
+  const j = s.toJSON();
+  await rpc('app_ai_dang_ky_thong_bao', { p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth });
+}
+document.addEventListener('da-ve', (e) => {
+  if (e.detail.man !== 'trang-dau') return;
+  gui_lai().catch(() => { da_gui_lai = false; });
+  ve_nut().catch(() => {});
+});

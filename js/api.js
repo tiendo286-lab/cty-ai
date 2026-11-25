@@ -4,3 +4,4 @@ let mod = null;
 const lay = async () => (mod ||= await import(GIA ? './api_gia.js' : './sb.js'));
 export async function rpc(ten, args = {}) { return (await lay()).rpc(ten, args); }
 export async function da_dang_nhap() { return (await lay()).da_dang_nhap(); }
+export async function dang_nhap(ma, mk) { return (await lay()).dang_nhap(ma, mk); }
