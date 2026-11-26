@@ -156,7 +156,11 @@ window.visualViewport?.addEventListener('scroll', vua_man);
 
 // ---------- dữ liệu
 function nhan(d, ca_lan = false) {
-  if (ca_lan) { S.tin = d.tin; S.tep = d.tep; } else { S.tin = [...S.tin, ...d.tin]; S.tep = [...S.tep, ...d.tep.filter((t) => !S.tep.some((x) => x.id === t.id))]; }
+  // hai lượt hỏi có thể chạy cùng lúc (gửi tin đúng lúc tới lượt tự hỏi) → chỉ thêm tin / tệp chưa có
+  if (ca_lan) { S.tin = d.tin; S.tep = d.tep; } else {
+    S.tin = [...S.tin, ...d.tin.filter((t) => !S.tin.some((x) => x.id === t.id))];
+    S.tep = [...S.tep, ...d.tep.filter((t) => !S.tep.some((x) => x.id === t.id))];
+  }
   S.viec = { ...S.viec, ...d.viec };
   S.mac = d.mac || S.mac;
   S.sau = Math.max(S.sau, ...S.tin.map((t) => t.id || 0));

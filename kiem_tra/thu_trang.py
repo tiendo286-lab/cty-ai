@@ -236,6 +236,17 @@ def thu_them_chat(pg, url, khung):
     kiem(sau == truoc, f"{khung}: rời chat (‹) thì thôi hỏi phần mới ({truoc}→{sau})")
 
 
+def thu_them_chat_khong_trung(pg, url, khung):
+    # hai lượt hỏi phần mới chạy cùng lúc (vd vừa gửi đúng lúc tới lượt tự hỏi) không được hiện một tin hai lần
+    _mo_viec(pg, url, "phong-kt", "can_anh", "Lãi lỗ tháng 10")
+    pg.evaluate("""async () => { const m = await import('/js/api.js');
+        await m.rpc('app_ai_tra_loi', { p_viec: Number(location.hash.slice(6)), p_noi_dung: 'tin chen ngang', p_tep: [] });
+        document.dispatchEvent(new Event('visibilitychange')); document.dispatchEvent(new Event('visibilitychange')); }""")
+    pg.wait_for_timeout(600)
+    n = pg.locator("#chat .tin-anh", has_text="tin chen ngang").count()
+    kiem(n == 1, f"{khung}: hai lượt hỏi cùng lúc không làm trùng tin ({n})")
+
+
 def thu_them_thong_bao(pg, url, khung):
     di(pg, url, "trang-dau")
     pg.wait_for_timeout(200)
