@@ -1,9 +1,9 @@
-// Bảng trượt và các nút hành động: nói ý / giao việc, xem việc (trả lời, Đồng ý, Đóng việc), nạp / bỏ kiến thức, đổi model, xem tệp.
+// Bảng trượt và các nút hành động: nói ý / giao việc, nạp / bỏ kiến thức, đổi model, xem tệp. Xem một việc: js/man/chat.js.
 import { HANH_DONG, ve } from './app.js';
 import { rpc } from './api.js';
 import { gui_tep } from './tep.js';
 import { bat } from './thong_bao.js';
-import { $, MAU_TRANG_THAI, bang, dong_bang, gio, html, toast } from './ui.js';
+import { $, bang, dong_bang, html, toast } from './ui.js';
 
 let TQ = null;
 document.addEventListener('da-ve', (e) => { TQ = e.detail.tq; });
@@ -43,56 +43,7 @@ HANH_DONG.gui = (el) => bam(el, async () => {
   await ve();
 });
 
-// ---------- xem một việc
-const NGUOI = { anh: 'Anh', phong: '', he_thong: 'Hệ thống' };
-async function mo_viec(id) {
-  const d = await rpc('app_ai_viec', { p_id: Number(id) });
-  const v = d.viec; const [lb] = MAU_TRANG_THAI[v.trang_thai] || ['', ''];
-  const kien_thuc = v.loai === 'doc_kien_thuc';
-  const giao = v.trang_thai === 'cho_anh' && v.loai === 'de_xuat_giao' ? (v.ket_qua?.giao || []) : [];
-  const hieu = v.trang_thai === 'cho_anh' && kien_thuc ? (v.ket_qua?.hieu_la || []) : [];
-  let hanh;
-  if (v.trang_thai === 'dang_lam') {
-    hanh = html`<textarea id="tra-loi" disabled placeholder="Phòng đang làm"></textarea><div class="khoa-nhan">Phòng đang làm, chờ xong rồi nhắn.</div>`;
-  } else if (v.trang_thai === 'cho_anh') {
-    hanh = html`<textarea id="tra-loi" data-goc="${kien_thuc ? v.noi_dung : ''}" placeholder="${kien_thuc ? 'Sửa lại nội dung kiến thức' : 'Trả lời hoặc góp ý (bấm micro để nói)'}">${kien_thuc ? v.noi_dung : ''}</textarea>
-      <div class="acts"><button class="btn pri" data-act="dong-y" data-id="${v.id}">${kien_thuc ? 'Đúng, ghi lại' : 'Đồng ý'}</button>
-      <button class="btn" data-act="gop-y" data-id="${v.id}">${kien_thuc ? 'Sửa lại' : 'Gửi góp ý'}</button>
-      <button class="btn" data-act="dong-viec" data-id="${v.id}">Đóng việc</button></div>`;
-  } else {
-    hanh = html`<textarea id="tra-loi" placeholder="${v.trang_thai === 'ket' ? 'Nhắn để phòng làm lại' : 'Nhắn thêm cho phòng (việc sẽ mở lại)'}"></textarea>
-      <div class="acts"><button class="btn pri" data-act="gop-y" data-id="${v.id}">${v.trang_thai === 'ket' ? 'Gửi, làm lại' : 'Gửi'}</button>
-      ${v.trang_thai !== 'xong' ? html`<button class="btn" data-act="dong-viec" data-id="${v.id}">Đóng việc</button>` : ''}</div>`;
-  }
-  bang(String(html`<h3>${v.tieu_de}</h3><div class="sub">${v.phong_ten} · ${lb}${v.ly_do_ket ? ' · ' + v.ly_do_ket : ''}</div>
-    ${d.tin.map((t) => html`<div class="bubble ${t.nguoi === 'anh' ? 'me' : ''}"><span class="who">${NGUOI[t.nguoi] || v.phong_ten} · ${gio(t.luc)}</span>${t.noi_dung}</div>`)}
-    ${giao.length ? html`<div class="bubble"><span class="who">Giám đốc định giao</span>${giao.map((g) => html`<div class="assign"><span class="dot" style="background:var(--st-new);margin-top:6px"></span><span><b>${ten_phong(g.phong)}: ${g.tieu_de}</b>${g.noi_dung}</span></div>`)}</div>` : ''}
-    ${hieu.length ? html`<div class="bubble"><span class="who">${v.phong_ten} đọc lại</span>Em hiểu là:<ul class="parts">${hieu.map((y) => html`<li>${y}</li>`)}</ul></div>` : ''}
-    ${d.tep.length ? html`<div class="tep-ds">${d.tep.map((t) => html`<button data-act="xem-tep" data-id="${t.id}">📎 ${t.ten}</button>`)}</div>` : ''}
-    ${hanh}`));
-}
-HANH_DONG['mo-viec'] = (el) => mo_viec(el.dataset.id).catch((e) => toast(e.message));
-HANH_DONG['dong-y'] = (el) => bam(el, async () => {
-  const o = $('#tra-loi');
-  // nạp kiến thức: anh đã sửa chữ mà bấm Đúng → gửi bản sửa cho phòng đọc lại, không ghi bản cũ
-  if (o && o.dataset.goc && o.value.trim() && o.value.trim() !== o.dataset.goc.trim()) {
-    await rpc('app_ai_tra_loi', { p_viec: Number(el.dataset.id), p_noi_dung: o.value.trim() });
-    dong_bang(); toast('Anh đã sửa nội dung — phòng sẽ đọc lại bản mới'); await ve();
-    return;
-  }
-  await rpc('app_ai_dong_y', { p_viec: Number(el.dataset.id) });
-  dong_bang(); toast('Đã đồng ý'); await ve();
-});
-HANH_DONG['gop-y'] = (el) => bam(el, async () => {
-  const nd = $('#tra-loi').value.trim();
-  if (!nd) throw new Error('Anh nói hoặc gõ vài chữ trước đã');
-  await rpc('app_ai_tra_loi', { p_viec: Number(el.dataset.id), p_noi_dung: nd });
-  dong_bang(); toast('Đã gửi, phòng sẽ làm tiếp'); await ve();
-});
-HANH_DONG['dong-viec'] = (el) => bam(el, async () => {
-  await rpc('app_ai_dong_viec', { p_viec: Number(el.dataset.id) });
-  dong_bang(); toast('Đã đóng việc'); await ve();
-});
+// ---------- xem tệp (màn chat và thẻ kiến thức dùng chung); xem một việc: js/man/chat.js
 HANH_DONG['xem-tep'] = (el) => rpc('app_ai_tep', { p_id: Number(el.dataset.id) }).then((t) => {
   // ảnh: hiện ngay trong bảng; tệp khác: hiện nút để anh tự bấm mở / tải (iPhone chặn mở tự động)
   el.parentElement.querySelectorAll('.xem-anh, .tep-mo').forEach((x) => x.remove());

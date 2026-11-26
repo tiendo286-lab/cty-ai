@@ -7,11 +7,13 @@ import * as phong from './man/phong.js';
 import * as mot_phong from './man/mot_phong.js';
 import * as so_lieu from './man/so_lieu.js';
 import * as lich_su from './man/lich_su.js';
+import * as chat from './man/chat.js';
 
-export const HANH_DONG = {};          // các nút bấm: bang.js đăng ký thêm (data-act="...")
+export const HANH_DONG = { ...chat.HANH };   // các nút bấm: chat.js + bang.js đăng ký thêm (data-act="...")
 export const trang = { tab: 'can_anh', loc: 'tat_ca' };
 let dang_ve = null;      // lời hứa của lần vẽ đang chạy
 let ve_lai = false;      // có yêu cầu vẽ lại trong lúc đang vẽ
+let da_co_man = false;   // đã vẽ một màn không phải chat (‹ trong chat quay về được)
 
 const ICON = {
   'trang-dau': '<path d="M3 11 12 4l9 7v9h-6v-6H9v6H3z" stroke-linejoin="round"/>',
@@ -24,6 +26,7 @@ const MUC = [['trang-dau', 'Trang đầu'], ['phong', 'Phòng'], ['so-lieu', 'S�
 function duong() {
   const h = location.hash.replace(/^#/, '') || 'trang-dau';
   if (h.startsWith('phong-')) return { man: 'mot-phong', ma: h.slice(6) };
+  if (/^viec-\d+$/.test(h)) return { man: 'chat', id: Number(h.slice(5)) };
   return { man: MUC.some(([k]) => k === h) ? h : 'trang-dau' };
 }
 
@@ -80,6 +83,8 @@ async function ve_mot() {
     if (!(await da_dang_nhap())) { man_dang_nhap(); return; }
     if (!(await rpc('app_ai_la_chu'))) { man_khoa('Trang này chỉ dành cho Chủ.'); return; }
     const d = duong();
+    if (d.man === 'chat') { await chat.mo(d.id, da_co_man); return; }
+    chat.dung();
     const tq = await rpc('app_ai_tong_quan');
     let than, tieu_de = 'Công ty AI', quay_lai = null;
     if (d.man === 'trang-dau') than = trang_dau.ve(tq);
@@ -91,6 +96,7 @@ async function ve_mot() {
     else { tieu_de = 'Lịch sử'; than = lich_su.ve(await rpc('app_ai_lich_su', { p_loc: trang.loc }), trang.loc); }
     $('#app').innerHTML = String(dau_trang(tieu_de, tq.mac, quay_lai)) + String(than);
     thanh_duoi(d.man === 'mot-phong' ? 'phong' : d.man, tq.cho_anh.length);
+    da_co_man = true;
     document.dispatchEvent(new CustomEvent('da-ve', { detail: { man: d.man, tq } }));
   } catch (e) {
     toast(e.message || 'Không tải được dữ liệu');
@@ -110,8 +116,10 @@ document.addEventListener('click', (e) => {
   if (f) { e.preventDefault(); f(el); }
 });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') dong_bang(); });
-window.addEventListener('hashchange', () => { trang.tab = 'can_anh'; dong_bang(); ve().then(() => window.scrollTo(0, 0)); });
-setInterval(() => { if (document.visibilityState === 'visible' && !dang_mo_bang()) ve(); }, 20000);
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && !dang_mo_bang()) ve(); });
+window.addEventListener('hashchange', () => { trang.tab = 'can_anh'; dong_bang(); if (duong().man !== 'chat') chat.dung(); ve().then(() => window.scrollTo(0, 0)); });
+// màn chat tự hỏi phần mới (chat.js); các màn khác tải lại mỗi 20 giây
+const nen_tai_lai = () => document.visibilityState === 'visible' && !dang_mo_bang() && duong().man !== 'chat';
+setInterval(() => { if (nen_tai_lai()) ve(); }, 20000);
+document.addEventListener('visibilitychange', () => { if (nen_tai_lai()) ve(); });
 
 import('./bang.js').catch((e) => console.error(e)).finally(() => ve());

@@ -26,7 +26,7 @@ function them_viec(o) {
     cha_id: null, tao_luc: now(), cap_nhat: now(), xong_luc: null, ...o };
   VIEC.push(v); return v;
 }
-const tin = (viec_id, nguoi, noi_dung, hanh_dong = null, luc = now()) => TIN.push({ viec_id, nguoi, noi_dung, hanh_dong, luc });
+const tin = (viec_id, nguoi, noi_dung, hanh_dong = null, luc = now()) => { const t = { id: ++id, viec_id, nguoi, noi_dung, hanh_dong, luc }; TIN.push(t); return t.id; };
 
 // --- dữ liệu ban đầu (ví dụ, không phải số thật)
 let v = them_viec({ phong: 'ns', tieu_de: 'Duyệt SOP pha chế: phần Sữa & kem', trang_thai: 'cho_anh', cap_nhat: truoc(5) });
@@ -34,10 +34,18 @@ tin(v.id, 'anh', 'Viết SOP pha chế phần sữa từ ảnh công thức', 'g
 v = them_viec({ phong: 'kho', tieu_de: 'Ngày kiểm kê kho tổng tháng 11?', trang_thai: 'cho_anh', cap_nhat: truoc(80) });
 tin(v.id, 'phong', '❓ HỎI ANH Anh cho em biết ngày kiểm kê kho tổng tháng 11 để tính lãi lỗ chuẩn.', null, truoc(80));
 v = them_viec({ phong: 'ns', tieu_de: 'SOP pha chế: phần Trà', trang_thai: 'dang_lam' }); tin(v.id, 'anh', 'Viết tiếp phần Trà', 'giao');
-v = them_viec({ phong: 'web', tieu_de: 'Chốt ca: thêm ô ghi chú bàn giao', trang_thai: 'dang_lam' }); tin(v.id, 'anh', 'Thêm ô ghi chú bàn giao', 'giao');
+v = them_viec({ phong: 'web', tieu_de: 'Chốt ca: thêm ô ghi chú bàn giao', trang_thai: 'dang_lam', bat_dau: truoc(0.05), tu_xong: true }); tin(v.id, 'anh', 'Thêm ô ghi chú bàn giao', 'giao', truoc(0.06));
 them_viec({ phong: 'kt', tieu_de: 'Tính lương tháng 11', trang_thai: 'cho_lam' });
 v = them_viec({ phong: 'tk', loai: 'ghi_chep', tieu_de: 'Biên bản họp quản lý 24/11', trang_thai: 'xong', xong_luc: now() });
 tin(v.id, 'phong', '✅ XONG 5 ý chính, 3 việc cần làm.');
+v = them_viec({ phong: 'kho', tieu_de: 'Thử nội dung lạ', trang_thai: 'xong', xong_luc: now() });
+tin(v.id, 'anh', 'Đọc tệp nhà cung cấp gửi', 'giao', truoc(2));
+tin(v.id, 'phong', '✅ XONG\nTệp có dòng lạ: <img src=x onerror="window.__doc=1"> và [bấm](javascript:window.__doc=2)', null, truoc(1.9));
+v = them_viec({ phong: 'kt', tieu_de: 'Lãi lỗ tháng 10', trang_thai: 'ket', ly_do_ket: 'Quá 30 phút' });
+tin(v.id, 'anh', 'Tính lãi lỗ tháng 10', 'giao', truoc(3)); tin(v.id, 'he_thong', '⛔ Kẹt: Quá 30 phút', null, truoc(2.4));
+v = them_viec({ phong: 'ns', loai: 'doc_kien_thuc', tieu_de: 'Nạp kiến thức: sữa mở hộp', noi_dung: 'Sữa tươi mở hộp dùng trong 24 giờ', trang_thai: 'cho_anh',
+  ket_qua: { hieu_la: ['Sữa tươi đã mở hộp chỉ dùng trong 24 giờ'] } });
+tin(v.id, 'anh', 'Sữa tươi mở hộp dùng trong 24 giờ', 'nap_kien_thuc', truoc(1)); tin(v.id, 'phong', '✅ CẦN DUYỆT\nEm hiểu là:\n- Sữa tươi đã mở hộp chỉ dùng trong 24 giờ', null, truoc(0.9));
 KT.push({ id: ++id, phong: null, loai: 'da_chot', noi_dung: '2026-11-25: Không sửa dữ liệu web, không đụng tiền, không nhắn tin cho nhân viên quán, khách, nhà cung cấp.', trang_thai: 'dang_dung', tao_luc: truoc(20) });
 KT.push({ id: ++id, phong: null, loai: 'da_chot', noi_dung: '2026-11-25: LLB là Lela Box, bán web riêng, không qua FABi.', trang_thai: 'dang_dung', tao_luc: truoc(20) });
 KT.push({ id: ++id, phong: 'ns', loai: 'da_chot', noi_dung: '2026-11-25: Làm SOP pha chế trước, SOP quản lý sau.', trang_thai: 'dang_dung', tao_luc: truoc(20) });
@@ -76,9 +84,23 @@ function mac_lam(v) {
     sua(v, { trang_thai: 'cho_anh', ket_qua: { hieu_la: y.length ? y : ['Em sẽ đọc và làm theo tệp anh gửi'] } });
     tin(v.id, 'phong', '✅ CẦN DUYỆT Em hiểu là: ' + (y.join('; ') || 'tệp anh gửi'));
   } else {
-    sua(v, { trang_thai: 'dang_lam' });
+    sua(v, { trang_thai: 'dang_lam', bat_dau: now(), tu_xong: true, xong_sau: Date.now() + 6000 });
   }
 }
+const BANG_8 = '| Tên | Cơ sở | Giờ công | Giờ lịch | Lệch | Phụ cấp | Lương | Ghi chú |\n|---|---|---|---|---|---|---|---|\n'
+  + '| Nhân viên A | LHP | 208 | 200 | +8 | 300.000 | 6.240.000 | Kiểm lại |\n| Nhân viên B | ĐK | 190 | 192 | -2 | 0 | 5.700.000 | |';
+function mac_xong_neu_den(v) {
+  if (v.trang_thai !== 'dang_lam' || !v.tu_xong) return;
+  if (!v.xong_sau) { v.xong_sau = Date.now() + 6000; return; }
+  if (Date.now() < v.xong_sau) return;
+  sua(v, { trang_thai: 'cho_anh', tu_xong: false, xong_sau: null });
+  const t = tin(v.id, 'phong', '✅ CẦN DUYỆT\n## Đã làm\n- Thêm ô **ghi chú bàn giao** ở trang chốt ca\n- Việc chưa xong tự hiện cho ca sau\n\n## Bảng ví dụ\n' + BANG_8
+    + '\n\nĐang ở nhánh riêng, **chưa đưa lên web thật**.');
+  TEP.push({ id: ++id, ten: 'bang_vi_du.csv', mime: 'text/csv', kich_thuoc: 12, base64: btoa('ten,gio\nA,8\n'), viec_id: v.id, kien_thuc_id: null, tin_id: t, nguon: 'phong' });
+}
+const tep_ra = (t) => ({ id: t.id, ten: t.ten, mime: t.mime, kich_thuoc: t.kich_thuoc, nguon: t.nguon || 'anh',
+  tin_id: t.tin_id ?? (TIN.find((x) => x.viec_id === t.viec_id && x.nguoi === 'anh')?.id ?? null) });
+const tin_ra = ({ id: i, nguoi, hanh_dong, noi_dung, luc }) => ({ id: i, nguoi, hanh_dong, noi_dung, luc });
 
 const H = {
   app_ai_la_chu: () => !Q.has('khong_chu'),
@@ -93,10 +115,16 @@ const H = {
     kien_thuc: KT.filter((k) => k.phong === p_ma).sort(sap_kt).map(kt_ra),
     kien_thuc_chung: p_ma === 'gd' ? KT.filter((k) => k.phong === null).sort(sap_kt).map(kt_ra) : [] }; },
   app_ai_kien_thuc_chung: () => { can_chu(); return KT.filter((k) => k.phong === null).sort(sap_kt).map(kt_ra); },
-  app_ai_viec: ({ p_id }) => { can_chu(); const v = lay_viec(p_id); return {
-    viec: { ...viec_ngan(v), noi_dung: v.noi_dung, ket_qua: v.ket_qua, ly_do_ket: v.ly_do_ket, cho_ca_cong_ty: v.cho_ca_cong_ty, tao_luc: v.tao_luc },
-    tin: TIN.filter((t) => t.viec_id === v.id).map(({ nguoi, hanh_dong, noi_dung, luc }) => ({ nguoi, hanh_dong, noi_dung, luc })),
-    tep: TEP.filter((t) => t.viec_id === v.id).map(({ id, ten, mime, kich_thuoc }) => ({ id, ten, mime, kich_thuoc })) }; },
+  app_ai_viec: ({ p_id }) => { can_chu(); const v = lay_viec(p_id); mac_xong_neu_den(v); return {
+    viec: { ...viec_ngan(v), noi_dung: v.noi_dung, ket_qua: v.ket_qua, ly_do_ket: v.ly_do_ket, cho_ca_cong_ty: v.cho_ca_cong_ty, tao_luc: v.tao_luc, bat_dau: v.bat_dau || null },
+    mac: { lan_cuoi: Q.has('mac_tat') ? truoc(1) : now(), dang_nhap_loi: false },
+    tin: TIN.filter((t) => t.viec_id === v.id).map(tin_ra),
+    tep: TEP.filter((t) => t.viec_id === v.id).map(tep_ra) }; },
+  app_ai_viec_moi: ({ p_id, p_sau_tin }) => { can_chu(); const v = lay_viec(p_id); mac_xong_neu_den(v); const sau = p_sau_tin || 0; return {
+    viec: { trang_thai: v.trang_thai, bat_dau: v.bat_dau || null, ly_do_ket: v.ly_do_ket, ket_qua: v.ket_qua, cap_nhat: v.cap_nhat, loai: v.loai, noi_dung: v.noi_dung },
+    mac: { lan_cuoi: Q.has('mac_tat') ? truoc(1) : now(), dang_nhap_loi: false },
+    tin: TIN.filter((t) => t.viec_id === v.id && t.id > sau).map(tin_ra),
+    tep: TEP.filter((t) => t.viec_id === v.id).map(tep_ra).filter((t) => t.tin_id > sau) }; },
   app_ai_lich_su: ({ p_loc }) => { can_chu(); const r = [];
     if (['tat_ca', 'da_duyet'].includes(p_loc)) TIN.filter((t) => t.nguoi === 'anh' && ['dong_y', 'tra_loi', 'nap_kien_thuc'].includes(t.hanh_dong))
       .forEach((t) => { const v = lay_viec(t.viec_id); r.push({ luc: t.luc, loai: 'da_duyet', tieu_de: v.tieu_de, phong_ten: ten_phong(v.phong), viec_id: v.id }); });
@@ -119,9 +147,12 @@ const H = {
     const v = them_viec({ phong: p_dich, loai: p_dich === 'gd' ? 'de_xuat_giao' : p_dich === 'tk' ? 'ghi_chep' : 'viec', tieu_de: tieu_de(nd, p_tep), noi_dung: nd });
     TEP.filter((t) => p_tep.includes(t.id) && !t.viec_id).forEach((t) => (t.viec_id = v.id));
     tin(v.id, 'anh', nd || '(Anh gửi kèm tệp)', 'giao'); mac_lam(v); return v.id; },
-  app_ai_tra_loi: ({ p_viec, p_noi_dung }) => { can_chu(); const nd = (p_noi_dung || '').trim(); if (!nd) loi('Anh nói hoặc gõ vài chữ trước đã');
-    const v = lay_viec(p_viec); if (v.trang_thai === 'dang_lam') loi('Phòng đang làm, chờ xong rồi nhắn');
-    tin(v.id, 'anh', nd, 'tra_loi'); sua(v, { trang_thai: 'cho_lam', ly_do_ket: null, noi_dung: v.loai === 'doc_kien_thuc' ? nd : v.noi_dung }); mac_lam(v); },
+  app_ai_tra_loi: ({ p_viec, p_noi_dung, p_tep = [] }) => { can_chu(); const nd = (p_noi_dung || '').trim();
+    if (!nd && !p_tep.length) loi('Anh nói hoặc gõ vài chữ trước đã'); if (p_tep.length > 6) loi('Tối đa 6 tệp mỗi lần');
+    const v = lay_viec(p_viec); const t = tin(v.id, 'anh', nd || '(Anh gửi kèm tệp)', 'tra_loi');
+    TEP.filter((x) => p_tep.includes(x.id) && !x.viec_id).forEach((x) => { x.viec_id = v.id; x.tin_id = t; });
+    if (v.trang_thai === 'dang_lam') { sua(v, {}); return t; }   // phòng đọc sau lượt này
+    sua(v, { trang_thai: 'cho_lam', ly_do_ket: null, noi_dung: v.loai === 'doc_kien_thuc' && nd ? nd : v.noi_dung }); mac_lam(v); return t; },
   app_ai_dong_y: ({ p_viec }) => { can_chu(); const v = lay_viec(p_viec); if (v.trang_thai !== 'cho_anh') loi('Việc này đã xử lý');
     if (v.loai === 'de_xuat_giao') (v.ket_qua?.giao || []).forEach((g) => { const c = them_viec({ phong: g.phong, tieu_de: g.tieu_de, noi_dung: g.noi_dung, cha_id: v.id });
       tin(c.id, 'he_thong', 'Giám đốc giao, anh đã đồng ý: ' + g.noi_dung); mac_lam(c); });
@@ -147,6 +178,7 @@ const H = {
 export async function rpc(ten, args = {}) {
   await new Promise((r) => setTimeout(r, 30));
   log.goi.push([ten]);
+  (window.__dem_rpc ||= {})[ten] = (window.__dem_rpc[ten] || 0) + 1;
   const f = H[ten] || loi('Không có hàm ' + ten);
   return structuredClone(f(args) ?? null);
 }
