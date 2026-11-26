@@ -81,7 +81,7 @@ def _so_cho_anh(pg):
     return int(pg.locator("section .sec-h h2").first.inner_text().split("(")[1].split(")")[0])
 
 
-TIEU_DE = {"trang-dau": "Công ty AI", "phong-rd": "R&D", "phong-kho": "Kho", "phong-ns": "Nhân sự & Đào tạo"}
+TIEU_DE = {"trang-dau": "Công ty AI", "phong-rd": "R&D", "phong-kho": "Kho", "phong-ns": "Nhân sự & Đào tạo", "phong-web": "Kỹ sư web", "phong-kt": "Kế toán"}
 
 
 def di(pg, url, h):
@@ -114,13 +114,12 @@ def thu_them_hanh_dong(pg, url, khung):
     pg.wait_for_selector(".tabs")
     sau_rd = pg.evaluate("document.querySelectorAll('.tabs b')[1].innerText*1 + document.querySelectorAll('.tabs b')[2].innerText*1")
     kiem(sau_rd == so_rd + 1, f"{khung}: Đồng ý (bấm 2 lần) tạo đúng 1 việc cho R&D ({so_rd}→{sau_rd})")
-    # việc đang làm: ô nhắn bị khoá
+    # việc đang làm: màn chat mở, ô nhắn VẪN mở (từ khung chat mới: phòng đọc sau lượt này)
     pg.click("[data-tab='dang_lam']")
     pg.wait_for_timeout(150)
     pg.locator(".list .row").first.click()
-    pg.wait_for_selector("#tra-loi")
-    kiem(pg.locator("#tra-loi").is_disabled() and "Phòng đang làm" in pg.locator(".sheet").inner_text(), f"{khung}: việc đang làm khoá ô nhắn")
-    pg.keyboard.press("Escape")
+    pg.wait_for_selector("#chat .dang-lam")
+    kiem(not pg.locator("#go-chu").is_disabled() and "đang làm" in pg.locator("#chat").inner_text(), f"{khung}: việc đang làm: chat hiện đang làm, ô nhắn vẫn mở")
     # đổi model Kho
     di(pg, url, "phong-kho")
     pg.wait_for_selector(".seg")
@@ -168,9 +167,73 @@ def thu_them_hanh_dong(pg, url, khung):
     pg.wait_for_selector(".wait .row")
     truoc = _so_cho_anh(pg)
     pg.locator(".wait .row").first.click()
+    pg.wait_for_selector("#chat [data-act='dong-viec']")
     pg.click("[data-act='dong-viec']")
     pg.wait_for_timeout(400)
+    di(pg, url, "trang-dau")
+    pg.wait_for_selector(".dept")
     kiem(_so_cho_anh(pg) == truoc - 1, f"{khung}: Đóng việc → Chờ anh giảm 1")
+
+
+def _mo_viec(pg, url, phong, tab, tieu_de):
+    di(pg, url, phong)
+    pg.wait_for_selector(".tabs")
+    pg.click(f"[data-tab='{tab}']")
+    pg.wait_for_timeout(150)
+    pg.locator(".list .row", has_text=tieu_de).first.click()
+    pg.wait_for_selector("#chat .tin, #chat .tin-he")
+
+
+def thu_them_chat(pg, url, khung):
+    dt = khung == "điện thoại"
+    # mở từ Trang đầu bằng cách bấm một việc
+    di(pg, url, "trang-dau")
+    pg.locator(".wait .row").first.click()
+    pg.wait_for_selector("#chat")
+    kiem(pg.evaluate("location.hash").startswith("#viec-"), f"{khung}: bấm việc ở Trang đầu → màn chat #viec-<id>")
+    kiem(pg.locator("#nav a").count() == 0, f"{khung}: màn chat ẩn thanh dưới")
+    # việc đang làm của Kỹ sư web: nhắn lúc đang làm, rồi phòng giả tự trả lời
+    _mo_viec(pg, url, "phong-web", "dang_lam", "Chốt ca")
+    kiem("đang làm…" in pg.locator("#chat").inner_text(), f"{khung}: hiện dòng đang làm")
+    pg.fill("#go-chu", "À thêm ô ký tên nữa")
+    pg.click("#chat-go .gui")
+    pg.wait_for_selector("#chat .xep-hang", timeout=5000)
+    kiem("Phòng sẽ đọc sau lượt này" in pg.locator("#chat .xep-hang").last.inner_text(), f"{khung}: nhắn lúc đang làm có nhãn Phòng sẽ đọc sau lượt này")
+    pg.wait_for_selector("#chat .nhan-duyet", timeout=14000)
+    kiem(True, f"{khung}: phòng trả lời tự hiện (không tải lại trang)")
+    md = pg.locator("#chat .tin-phong .md").last
+    kiem(md.locator("strong").count() > 0 and md.locator("li").count() >= 2 and "**" not in md.inner_text(), f"{khung}: tin phòng hiện chữ đậm + gạch đầu dòng, không còn **")
+    kiem(pg.locator("#chat .tin-tep", has_text="bang_vi_du.csv").count() == 1, f"{khung}: tệp phòng gửi hiện trong tin")
+    kiem(khong_tran(pg), f"{khung}: chat có bảng 8 cột không tràn ngang")
+    if dt:
+        kiem(pg.evaluate("(() => { const b = document.querySelector('#chat .bang-cuon'); return b.scrollWidth > b.clientWidth; })()"), f"{khung}: bảng rộng cuộn ngang trong tin")
+        o = pg.locator("#chat-go").bounding_box()
+        kiem(o["y"] + o["height"] <= pg.evaluate("visualViewport.height") + 1, f"{khung}: ô gõ nằm trong màn hình")
+    kiem(pg.locator("#chat-nut [data-act='dong-y']").count() == 1 and pg.locator("#chat-nut [data-act='dong-viec']").count() == 1, f"{khung}: Chờ anh có Đồng ý + Đóng việc")
+    # gửi tin kèm tệp
+    pg.set_input_files("#go-tep", files=[{"name": "bang.csv", "mimeType": "text/csv", "buffer": b"a,b\n1,2\n"}])
+    kiem(pg.locator("#chon-ds .chon-tep", has_text="bang.csv").count() == 1, f"{khung}: tệp đã chọn hiện thẻ trước khi gửi")
+    pg.fill("#go-chu", "Gửi em bảng này")
+    pg.click("#chat-go .gui")
+    pg.wait_for_function("[...document.querySelectorAll('#chat .tin-anh')].some(e => e.innerText.includes('bang.csv'))", timeout=5000)
+    kiem(True, f"{khung}: tin anh gửi kèm tệp hiện bên phải kèm tên tệp")
+    # nội dung lạ không chạy
+    _mo_viec(pg, url, "phong-kho", "xong", "Thử nội dung lạ")
+    kiem(pg.locator("#chat .tin img").count() == 0 and pg.locator("#chat a[href^='javascript']").count() == 0
+         and pg.evaluate("window.__doc === undefined"), f"{khung}: nội dung độc hiện thành chữ, không chạy")
+    # các nút theo trạng thái
+    _mo_viec(pg, url, "phong-kt", "can_anh", "Lãi lỗ tháng 10")
+    kiem(pg.locator("#chat-nut [data-act='dong-viec']").count() == 1 and pg.locator("#chat-nut [data-act='dong-y']").count() == 0, f"{khung}: Kẹt có Đóng việc, không có Đồng ý")
+    _mo_viec(pg, url, "phong-ns", "can_anh", "sữa mở hộp")
+    nut = pg.locator("#chat-nut").inner_text()
+    kiem("Đúng, ghi lại" in nut and "Sửa lại" in nut and "Em hiểu là" in pg.locator("#chat").inner_text(), f"{khung}: nạp kiến thức có Em hiểu là + Đúng, ghi lại + Sửa lại")
+    # rời chat thì thôi hỏi lại
+    pg.click("#chat [data-act='chat-lui']")
+    pg.wait_for_function("!location.hash.startsWith('#viec-')", timeout=3000)
+    truoc = pg.evaluate("(window.__dem_rpc || {}).app_ai_viec_moi || 0")
+    pg.wait_for_timeout(12000)
+    sau = pg.evaluate("(window.__dem_rpc || {}).app_ai_viec_moi || 0")
+    kiem(sau == truoc, f"{khung}: rời chat (‹) thì thôi hỏi phần mới ({truoc}→{sau})")
 
 
 def thu_them_thong_bao(pg, url, khung):
@@ -209,8 +272,8 @@ def thu_them_sua_truoc_khi_dung(pg, url, khung):
     pg.wait_for_timeout(300)
     di(pg, url, "trang-dau")
     pg.locator(".wait .row", has_text="Kiểm kê ngày 30").first.click()
-    pg.wait_for_selector("#tra-loi")
-    pg.fill("#tra-loi", "Kiểm kê ngày 29")
+    pg.wait_for_selector("#go-chu")
+    pg.fill("#go-chu", "Kiểm kê ngày 29")
     pg.click("[data-act='dong-y']")
     pg.wait_for_timeout(400)
     di(pg, url, "phong-kho")
@@ -229,9 +292,9 @@ def thu_them_xem_tep(pg, url, khung):
     pg.locator(".wait .row", has_text="Ảnh công thức").first.click()
     pg.wait_for_selector("[data-act='xem-tep']")
     pg.click("[data-act='xem-tep']")
-    pg.wait_for_selector(".sheet img.xem-anh", timeout=3000)
-    rong = pg.evaluate("document.querySelector('.sheet img.xem-anh').naturalWidth")
-    kiem(rong > 0, f"{khung}: xem ảnh kèm hiện ngay trong bảng (không tải về)")
+    pg.wait_for_selector("#chat img.xem-anh", timeout=3000)
+    rong = pg.evaluate("document.querySelector('#chat img.xem-anh').naturalWidth")
+    kiem(rong > 0, f"{khung}: xem ảnh kèm hiện ngay trong chat (không tải về)")
     pg.keyboard.press("Escape")
 
 
